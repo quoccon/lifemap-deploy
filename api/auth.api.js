@@ -23,6 +23,6 @@ exports.register = async (req, res, next) => {
         return sendResponse(res, 201, 'User registered successfully', user);
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error');
+        return sendResponse(res, 500, `Server error: ${error}`);
     }
 };
