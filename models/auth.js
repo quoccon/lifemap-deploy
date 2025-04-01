@@ -1,5 +1,5 @@
 const db = require('../configs/connect_db');
-const brypt = require('bcrypt');
+const brypt = require('bcryptjs');
 
 const authSchema = new db.mongoose.Schema({
     username: { type: String, unique: true, required: true },
