@@ -38,7 +38,9 @@ exports.login = async (req, res, next) => {
     if (!errors.isEmpty()) {
         return sendResponse(res, 400, 'Validation failed', errors.array());
     }
-    const { email, password, rememberMe } = req.body;
+    const { email, password, remember = false } = req.body;
+    console.log("remember:",remember);
+    
 
     try {
         const user = await AuthModel.findOne({ email: email });
@@ -49,11 +51,26 @@ exports.login = async (req, res, next) => {
         if (!isValid) {
             return sendResponse(res, 401, 'Invalid credentials');
         }
-        const token = genarateToken(user._id);
+        const token = genarateToken(user._id,remember);
 
         return sendResponse(res, 200, 'Login successful', { token, user });
     } catch (error) {
         console.error(error);
         return sendResponse(res, 500, 'Server error', "Login failed");
+    }
+};
+
+exports.infoAccount = async(req,res,next) => {
+    try {
+        const userId = req.userId;
+        const user = await AuthModel.findById(userId).select('-password');
+        if(!user){
+            return sendResponse(res, 404, 'User not found');
+        }
+
+        return sendResponse(res, 200, 'Account info retrieved successfully', user);
+    } catch (error) {
+        console.error(error);
+        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info"); 
     }
 };
