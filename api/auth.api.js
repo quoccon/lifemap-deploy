@@ -1,28 +1,29 @@
-var AuthModel = require("../models/auth");
+var AuthModel = require("../models/auth.model");
 const { check, validationResult } = require('express-validator');
 const sendResponse = require('../utils/base_response');
 const genarateToken = require('../utils/genarate_token');
 
 exports.register = async (req, res, next) => {
-    [
+    await Promise.all([
         check('username').notEmpty().withMessage('Username is required'),
         check('email').isEmail().withMessage('Invalid email'),
         check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    ]
+        check('gender').isEmpty().withMessage('Gender is required'),
+    ])
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return sendResponse(res, 400, 'Validation failed', errors.array());
     }
-    const { username, email, password, avatar, gender } = req.body;
+    const { username, email, password, avatar, gender,location,sport_preferences } = req.body;
     try {
         const existingUser = await AuthModel.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
             return sendResponse(res, 400, 'Username or email already taken');
         }
 
-        const user = new AuthModel({ username, email, password, avatar, gender });
+        const user = new AuthModel({ username, email, password, avatar, gender,location,sport_preferences });
         await user.save();
-        return sendResponse(res, 201, 'User registered successfully', user);
+        return sendResponse(res, 201, 'User registered successfully', user.toJSON);
     } catch (error) {
         console.error(error);
         return sendResponse(res, 500, `Server error: ${error}`);
@@ -52,7 +53,8 @@ exports.login = async (req, res, next) => {
             return sendResponse(res, 401, 'Invalid credentials');
         }
         const token = genarateToken(user._id,remember);
-
+        console.log(user);
+        
         return sendResponse(res, 200, 'Login successful', { token, user });
     } catch (error) {
         console.error(error);
