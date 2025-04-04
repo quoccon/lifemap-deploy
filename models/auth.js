@@ -7,6 +7,9 @@ const authSchema = new db.mongoose.Schema({
     avatar: { type: String, default: '' },
     gender: { type: String, default: '' },
     password: { type: String, required: true },
+    isVerifyToken:{ type: Boolean, default: false},
+    otp:{type: String},
+    otpExpires: { type: Number },
     created_at: { type: Date, default: Date.now },
 });
 
