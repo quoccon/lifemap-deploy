@@ -6,6 +6,7 @@ var postApi = require('../api/post.api');
 var upload = require('../utils/upload');
 /* GET users listing. */
 router.post('/auth/register',authApi.register);
+router.post('/auth/verify-otp',authApi.verifyOTP);
 router.post('/auth/login',authApi.login);
 router.get('/auth/info-account',veryfyToken,authApi.infoAccount);
 

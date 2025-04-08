@@ -4,6 +4,8 @@ const sendResponse = require('../utils/base_response');
 const genarateToken = require('../utils/genarate_token');
 var suggetsModel = require('../models/suggest.model');
 const suggestModel = require("../models/suggest.model");
+var { generateOTP, getOTPExpiration, sendOTP } = require('../utils/genarate_otp');
+
 
 exports.register = async (req, res, next) => {
     await Promise.all([
@@ -22,14 +24,38 @@ exports.register = async (req, res, next) => {
         if (existingUser) {
             return sendResponse(res, 400, 'Username or email already taken');
         }
-
-        const user = new AuthModel({ username, email, password, avatar, gender, location, sport_preferences });
+        const otp = generateOTP();
+        const otpExpires = getOTPExpiration();
+        const user = new AuthModel({ username, email, password, avatar, gender, location, sport_preferences ,otp,otpExpires,});
         await user.save();
+        await sendOTP(email,otp);
         return sendResponse(res, 201, 'User registered successfully', user.toJSON);
     } catch (error) {
         console.error(error);
         return sendResponse(res, 500, `Server error: ${error}`);
     }
+};
+
+exports.verifyOTP = async (req,res) => {
+    const {email,otp} = req.body;
+   try {
+    const user = await AuthModel.findOne({email});
+    if (!user) {
+        return sendResponse(res, 404, 'User not found');
+    }
+    if (user.otp !== otp || Date.now() > user.otpExpires) {
+        return sendResponse(res, 400, 'Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    user.isVerifyToken = true;
+    await user.save();
+
+    return sendResponse(res, 200, 'Xác minh tài khoản thành công', user.toJSON());
+   } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, 'Server error', "Verify OTP failed");
+   }
 };
 
 exports.login = async (req, res, next) => {
@@ -42,8 +68,6 @@ exports.login = async (req, res, next) => {
         return sendResponse(res, 400, 'Validation failed', errors.array());
     }
     const { email, password, remember = false } = req.body;
-    console.log("remember:", remember);
-
 
     try {
         const user = await AuthModel.findOne({ email: email });
