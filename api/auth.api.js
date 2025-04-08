@@ -2,6 +2,8 @@ var AuthModel = require("../models/auth.model");
 const { check, validationResult } = require('express-validator');
 const sendResponse = require('../utils/base_response');
 const genarateToken = require('../utils/genarate_token');
+var suggetsModel = require('../models/suggest.model');
+const suggestModel = require("../models/suggest.model");
 
 exports.register = async (req, res, next) => {
     await Promise.all([
@@ -14,14 +16,14 @@ exports.register = async (req, res, next) => {
     if (!errors.isEmpty()) {
         return sendResponse(res, 400, 'Validation failed', errors.array());
     }
-    const { username, email, password, avatar, gender,location,sport_preferences } = req.body;
+    const { username, email, password, avatar, gender, location, sport_preferences } = req.body;
     try {
         const existingUser = await AuthModel.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
             return sendResponse(res, 400, 'Username or email already taken');
         }
 
-        const user = new AuthModel({ username, email, password, avatar, gender,location,sport_preferences });
+        const user = new AuthModel({ username, email, password, avatar, gender, location, sport_preferences });
         await user.save();
         return sendResponse(res, 201, 'User registered successfully', user.toJSON);
     } catch (error) {
@@ -40,8 +42,8 @@ exports.login = async (req, res, next) => {
         return sendResponse(res, 400, 'Validation failed', errors.array());
     }
     const { email, password, remember = false } = req.body;
-    console.log("remember:",remember);
-    
+    console.log("remember:", remember);
+
 
     try {
         const user = await AuthModel.findOne({ email: email });
@@ -52,9 +54,9 @@ exports.login = async (req, res, next) => {
         if (!isValid) {
             return sendResponse(res, 401, 'Invalid credentials');
         }
-        const token = genarateToken(user._id,remember);
+        const token = genarateToken(user._id, remember);
         console.log(user);
-        
+
         return sendResponse(res, 200, 'Login successful', { token, user });
     } catch (error) {
         console.error(error);
@@ -62,17 +64,57 @@ exports.login = async (req, res, next) => {
     }
 };
 
-exports.infoAccount = async(req,res,next) => {
+exports.infoAccount = async (req, res, next) => {
     try {
         const userId = req.userId;
         const user = await AuthModel.findById(userId).select('-password');
-        if(!user){
+        if (!user) {
             return sendResponse(res, 404, 'User not found');
         }
 
         return sendResponse(res, 200, 'Account info retrieved successfully', user);
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info"); 
+        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
     }
 };
+
+exports.addSuggets = async (req, res, next) => {
+    try {
+        const { suggest_name } = req.body;
+        const suggest = await suggestModel.findOne({ suggets_name: suggest_name });
+        if (suggest) {
+            return sendResponse(res, 400, "Suggest already");
+        }
+        const new_suggest = new suggestModel({
+            suggets_name: suggest_name,
+        });
+
+        new_suggest.save();
+        return sendResponse(res, 200, 'Suggest updated successfully');
+    } catch (error) {
+        console.error(error);
+        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
+    }
+};
+
+exports.suggestSport = async (req, res, next) => {
+    try {
+        const suggest = await suggestModel.find();
+        if (!suggest) {
+            return sendResponse(res, 400, "Not found");
+        }
+        return sendResponse(res, 200, "Get list suggest successful", suggest);
+    } catch (error) {
+        console.error(error);
+        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
+    }
+};
+
+// exports.updateAccount = async (req, res, next) => {
+//     try {
+//         const suggestion =
+//     } catch (error) {
+        
+//     }
+// }
