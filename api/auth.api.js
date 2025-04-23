@@ -1,144 +1,140 @@
-var AuthModel = require("../models/auth.model");
+const AuthModel = require("../models/auth.model");
 const { check, validationResult } = require('express-validator');
-const sendResponse = require('../utils/base_response');
-const genarateToken = require('../utils/genarate_token');
-var suggetsModel = require('../models/suggest.model');
-const suggestModel = require("../models/suggest.model");
-var { generateOTP, getOTPExpiration, sendOTP } = require('../utils/genarate_otp');
+const {
+    sendBadRequest,
+    sendCreated,
+    sendServerError,
+    sendSuccess,
+    sendNotFound,
+    sendUnauthorized
+} = require('../utils/base_response');
+const generateToken = require('../utils/genarate_token');
+const SuggestModel = require('../models/suggest.model');
+const { generateOTP, getOTPExpiration, sendOTP } = require('../utils/genarate_otp');
 
-
-exports.register = async (req, res, next) => {
+exports.register = async (req, res) => {
     await Promise.all([
-        check('username').notEmpty().withMessage('Username is required'),
-        check('email').isEmail().withMessage('Invalid email'),
-        check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-        check('gender').isEmpty().withMessage('Gender is required'),
-    ])
+        check('username').notEmpty().withMessage('Username is required').run(req),
+        check('email').isEmail().withMessage('Invalid email').run(req),
+        check('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters').run(req),
+        check('gender').notEmpty().withMessage('Gender is required').run(req),
+    ]);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return sendResponse(res, 400, 'Validation failed', errors.array());
+        return sendBadRequest(res, 'Validation failed', errors.array());
     }
+
     const { username, email, password, avatar, gender, location, sport_preferences } = req.body;
     try {
         const existingUser = await AuthModel.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
-            return sendResponse(res, 400, 'Username or email already taken');
+            return sendBadRequest(res, 'Username or email already taken');
         }
+
         const otp = generateOTP();
         const otpExpires = getOTPExpiration();
-        const user = new AuthModel({ username, email, password, avatar, gender, location, sport_preferences ,otp,otpExpires,});
+
+        const user = new AuthModel({
+            username, email, password, avatar, gender, location,
+            sport_preferences, otp, otpExpires
+        });
+
         await user.save();
-        await sendOTP(email,otp);
-        return sendResponse(res, 201, 'User registered successfully', user.toJSON);
+        await sendOTP(email, otp);
+
+        return sendCreated(res, 'User registered successfully', user.toJSON());
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, `Server error: ${error}`);
+        return sendServerError(res, 'Server error during registration');
     }
 };
 
-exports.verifyOTP = async (req,res) => {
-    const {email,otp} = req.body;
-   try {
-    const user = await AuthModel.findOne({email});
-    if (!user) {
-        return sendResponse(res, 404, 'User not found');
-    }
-    if (user.otp !== otp || Date.now() > user.otpExpires) {
-        return sendResponse(res, 400, 'Mã OTP không hợp lệ hoặc đã hết hạn');
-    }
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    user.isVerifyToken = true;
-    await user.save();
+exports.verifyOTP = async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        const user = await AuthModel.findOne({ email });
+        if (!user) return sendNotFound(res, 'User not found');
 
-    return sendResponse(res, 200, 'Xác minh tài khoản thành công', user.toJSON());
-   } catch (error) {
-    console.error(error);
-    return sendResponse(res, 500, 'Server error', "Verify OTP failed");
-   }
+        if (user.otp !== otp || Date.now() > user.otpExpires) {
+            return sendBadRequest(res, 'OTP code is invalid or expired');
+        }
+
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        user.isVerifyToken = true;
+        await user.save();
+
+        return sendSuccess(res, 'Account verification successful', user.toJSON());
+    } catch (error) {
+        console.error(error);
+        return sendServerError(res, 'Verify OTP failed');
+    }
 };
 
-exports.login = async (req, res, next) => {
+exports.login = async (req, res) => {
     await Promise.all([
         check('email').notEmpty().withMessage('Email is required').run(req),
         check('password').notEmpty().withMessage('Password is required').run(req),
     ]);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return sendResponse(res, 400, 'Validation failed', errors.array());
+        return sendBadRequest(res, 'Validation failed', errors.array());
     }
+
     const { email, password, remember = false } = req.body;
-
     try {
-        const user = await AuthModel.findOne({ email: email });
-        if (!user) {
-            return sendResponse(res, 401, 'Invalid credentials');
-        }
-        const isValid = await user.comparePassword(password);
-        if (!isValid) {
-            return sendResponse(res, 401, 'Invalid credentials');
-        }
-        const token = genarateToken(user._id, remember);
-        console.log(user);
+        const user = await AuthModel.findOne({ email }).populate('sport_preferences');
+        if (!user) return sendUnauthorized(res, 'Invalid credentials');
 
-        return sendResponse(res, 200, 'Login successful', { token, user });
+        const isValid = await user.comparePassword(password);
+        if (!isValid) return sendUnauthorized(res, 'Invalid credentials');
+
+        const token = generateToken(user._id, remember);
+        return sendSuccess(res, 'Login successful', { token, user });
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error', "Login failed");
+        return sendServerError(res, 'Login failed');
     }
 };
 
-exports.infoAccount = async (req, res, next) => {
+exports.infoAccount = async (req, res) => {
     try {
         const userId = req.userId;
         const user = await AuthModel.findById(userId).select('-password');
-        if (!user) {
-            return sendResponse(res, 404, 'User not found');
-        }
+        if (!user) return sendNotFound(res, 'User not found');
 
-        return sendResponse(res, 200, 'Account info retrieved successfully', user);
+        return sendSuccess(res, 'Account info retrieved successfully', user);
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
+        return sendServerError(res, 'Failed to retrieve account info');
     }
 };
 
-exports.addSuggets = async (req, res, next) => {
+exports.addSuggets = async (req, res) => {
     try {
         const { suggest_name } = req.body;
-        const suggest = await suggestModel.findOne({ suggets_name: suggest_name });
-        if (suggest) {
-            return sendResponse(res, 400, "Suggest already");
-        }
-        const new_suggest = new suggestModel({
-            suggets_name: suggest_name,
-        });
+        const existing = await SuggestModel.findOne({ suggets_name: suggest_name });
+        if (existing) return sendBadRequest(res, 'Suggest already exists');
 
-        new_suggest.save();
-        return sendResponse(res, 200, 'Suggest updated successfully');
+        const newSuggest = new SuggestModel({ suggets_name: suggest_name });
+        await newSuggest.save();
+
+        return sendSuccess(res, 'Suggest added successfully');
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
+        return sendServerError(res, 'Failed to add suggest');
     }
 };
 
-exports.suggestSport = async (req, res, next) => {
+exports.suggestSport = async (req, res) => {
     try {
-        const suggest = await suggestModel.find();
-        if (!suggest) {
-            return sendResponse(res, 400, "Not found");
+        const suggestions = await SuggestModel.find();
+        if (!suggestions || suggestions.length === 0) {
+            return sendNotFound(res, 'No suggestions found');
         }
-        return sendResponse(res, 200, "Get list suggest successful", suggest);
+        return sendSuccess(res, 'Get list suggest successful', suggestions);
     } catch (error) {
         console.error(error);
-        return sendResponse(res, 500, 'Server error', "Failed to retrieve account info");
+        return sendServerError(res, 'Failed to retrieve suggestions');
     }
 };
-
-// exports.updateAccount = async (req, res, next) => {
-//     try {
-//         const suggestion =
-//     } catch (error) {
-        
-//     }
-// }

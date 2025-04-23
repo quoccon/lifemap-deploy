@@ -10,7 +10,12 @@ const auth_schema = new db.mongoose.Schema({
     isVerifyToken: { type: Boolean, default: false },
     otp: { type: String },
     otpExpires: { type: Number },
-    location: { type: String },
+    location: {
+        address: { type: String, default: '' },
+        ward: { type: String, default: '' },
+        district: { type: String, default: '' },
+        city: { type: String, default: '' }
+    },
     sport_preferences: [{ type: db.mongoose.Types.ObjectId, ref: 'Suuggest', default: '' }],
     password: { type: String, required: true, maxlength: 100 },
     created_at: { type: Date, default: Date.now },
