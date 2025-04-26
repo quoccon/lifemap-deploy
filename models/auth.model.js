@@ -4,7 +4,7 @@ const brypt = require('bcryptjs');
 const auth_schema = new db.mongoose.Schema({
     username: { type: String, unique: true, required: true, maxlength: 50 },
     email: { type: String, unique: true, required: true, maxlength: 100 },
-    avatar: { type: String, default: '' },
+    avatar: { type: String, default: 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Unknown_person.jpg' },
     gender: { type: String, default: '' },
     password: { type: String, required: true },
     isVerifyToken: { type: Boolean, default: false },

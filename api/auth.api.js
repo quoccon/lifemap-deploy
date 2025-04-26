@@ -24,7 +24,7 @@ exports.register = async (req, res) => {
         return sendBadRequest(res, 'Validation failed', errors.array());
     }
 
-    const { username, email, password, avatar, gender, location, sport_preferences } = req.body;
+    const { username, email, password, gender } = req.body;
     try {
         const existingUser = await AuthModel.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
@@ -35,14 +35,13 @@ exports.register = async (req, res) => {
         const otpExpires = getOTPExpiration();
 
         const user = new AuthModel({
-            username, email, password, avatar, gender, location,
-            sport_preferences, otp, otpExpires
+            username, email, password, gender,otpExpires,otp
         });
 
         await user.save();
         await sendOTP(email, otp);
 
-        return sendCreated(res, 'User registered successfully', user.toJSON());
+        return sendCreated(res, 'User registered successfully');
     } catch (error) {
         console.error(error);
         return sendServerError(res, 'Server error during registration');
@@ -54,7 +53,15 @@ exports.verifyOTP = async (req, res) => {
     try {
         const user = await AuthModel.findOne({ email });
         if (!user) return sendNotFound(res, 'User not found');
-
+        console.log(user.otp !== otp || Date.now() > user.otpExpires);
+        
+        console.log(user.otp);
+        console.log(otp);
+        console.log(Date.now());
+        
+        console.log(user.otpExpires);
+        
+        
         if (user.otp !== otp || Date.now() > user.otpExpires) {
             return sendBadRequest(res, 'OTP code is invalid or expired');
         }
@@ -64,7 +71,7 @@ exports.verifyOTP = async (req, res) => {
         user.isVerifyToken = true;
         await user.save();
 
-        return sendSuccess(res, 'Account verification successful', user.toJSON());
+        return sendSuccess(res, 'Account verification successful');
     } catch (error) {
         console.error(error);
         return sendServerError(res, 'Verify OTP failed');
