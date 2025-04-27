@@ -6,11 +6,19 @@ const {
     sendServerError,
     sendSuccess,
     sendNotFound,
-    sendUnauthorized
+    sendUnauthorized,
+    sendForbidden
 } = require('../utils/base_response');
 const generateToken = require('../utils/genarate_token');
 const SuggestModel = require('../models/suggest.model');
 const { generateOTP, getOTPExpiration, sendOTP } = require('../utils/genarate_otp');
+const { uploadImage } = require('../utils/upload_file_to_firebase');
+// const upload = require('../utils/upload');
+const path = require('path');
+const PROVINCES_FILE = path.join(__dirname, '../data/tinh_tp.json');
+const DISTRICTS_FILE = path.join(__dirname, '../data/quan_huyen.json');
+const WARDS_FILE = path.join(__dirname, '../data/xa_phuong.json');
+const readJsonFile = require('../utils/import_location_data');
 
 exports.register = async (req, res) => {
     await Promise.all([
@@ -35,7 +43,7 @@ exports.register = async (req, res) => {
         const otpExpires = getOTPExpiration();
 
         const user = new AuthModel({
-            username, email, password, gender,otpExpires,otp
+            username, email, password, gender, otpExpires, otp
         });
 
         await user.save();
@@ -54,14 +62,14 @@ exports.verifyOTP = async (req, res) => {
         const user = await AuthModel.findOne({ email });
         if (!user) return sendNotFound(res, 'User not found');
         console.log(user.otp !== otp || Date.now() > user.otpExpires);
-        
+
         console.log(user.otp);
         console.log(otp);
         console.log(Date.now());
-        
+
         console.log(user.otpExpires);
-        
-        
+
+
         if (user.otp !== otp || Date.now() > user.otpExpires) {
             return sendBadRequest(res, 'OTP code is invalid or expired');
         }
@@ -145,3 +153,86 @@ exports.suggestSport = async (req, res) => {
         return sendServerError(res, 'Failed to retrieve suggestions');
     }
 };
+
+exports.updateUser = async (req, res, next) => {
+    const userId = req.userId;
+    const { sport_preferences, city, district, ward, address } = req.body;
+    const file = req.file;
+    try {
+        const user = await AuthModel.findById(userId).select('-password');
+        if (!user) return sendNotFound(res, 'User not found');
+
+        if (file) {
+            try {
+                const avatarUrl = await uploadImage(file);
+                user.avatar = avatarUrl;
+            } catch (error) {
+                console.error('Avatar upload error:', uploadError);
+                return sendServerError(res, 'Failed to upload avatar');
+            }
+        }
+
+        if (sport_preferences) {
+            user.sport_preferences = sport_preferences;
+        }
+        if (city && district && ward && address) {
+            user.location.city = city;
+            user.location.district = district;
+            user.location.ward = ward;
+            user.location.address = address;
+        }
+
+        await user.save();
+        return sendSuccess(res, 'Update user successfully', user);
+    } catch (error) {
+        console.error(error);
+        return sendServerError(res, 'Failed to retrieve suggestions');
+    }
+}
+
+exports.getProvinces = async (req, res) => {
+    try {
+        const provinces = await readJsonFile(PROVINCES_FILE);
+        return sendSuccess(res, 'get provinces success', provinces);
+    } catch (error) {
+        console.error(error);
+        return sendServerError(res, 'Failed to retrieve suggestions');
+    }
+}
+
+exports.getDistricts = async (req, res) => {
+    const provinceId = req.query.province_id;
+    if (!provinceId) {
+        return sendBadRequest(res, 'province_id is required');
+    }
+    try {
+        const districtsRaw = await readJsonFile(DISTRICTS_FILE);
+        const districts = Object.values(districtsRaw)
+        const filteredDistricts = districts.filter(d => {
+            return String(d.parent_code) === String(provinceId);
+        });
+
+        return sendSuccess(res, 'get districts success', filteredDistricts);
+
+    } catch (error) {
+        console.error(error);
+        return sendServerError(res, 'Failed to retrieve suggestions');
+    }
+}
+
+exports.getWards = async (req, res) => {
+    const districtId = req.query.district_id;
+    if (!districtId) {
+        return sendBadRequest(res, 'distrcts is required');
+    }
+    try {
+        const wardsRaw = await readJsonFile(WARDS_FILE);
+        const wards = Object.values(wardsRaw);
+        const filterWards = wards.filter(w => String(w.parent_code) === String(districtId));
+        return sendSuccess(res, 'get wards success', filterWards);
+
+    } catch (error) {
+        console.error(error);
+        return sendServerError(res, 'Failed to retrieve suggestions');
+    }
+}

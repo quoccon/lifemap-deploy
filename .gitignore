@@ -1,4 +1,4 @@
 .env/*
-*.json
+services/*.json
 node_modules/
 .vscode/

@@ -1,22 +1,15 @@
-var db = require('../configs/connect_db');
-var fs = require('fs');
-var path = require('path');
-const Province = require('../models/province.model');
-const District = require('../models/districts.model');
-const Ward = require('../models/ward.model');
+const fs = require('fs').promises;
+const path = require('path');
 
-const province = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/tinh_tp.json')));
-const districts = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/quan_huyen.json')));
-const wards = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/xa_phuong.json')));
-
-const importLocationData = async () => {
+const readJsonFile = async (filePath) => {
     try {
-        await Province.deleteMany();
-        await District.deleteMany();
-        await Ward.deleteMany();
-
-    
+        const absolutePath = path.resolve(__dirname, filePath);
+        const data = await fs.readFile(absolutePath, 'utf8');
+        return JSON.parse(data);
     } catch (error) {
-        
+        console.error(`Error reading file ${filePath}:`, error);
+        return [];
     }
 };
+
+module.exports = readJsonFile;

@@ -1,26 +1,23 @@
 const jwt = require('jsonwebtoken');
-const sendResponse = require('../utils/base_response');
+const { sendUnauthorized } = require('../utils/base_response');
 require('dotenv').config();
 
-const veryfyToken = (req,res,next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-    if(!token){
-        return sendResponse(res,401,"No token provided");
-    }
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // console.log(decoded);
-        
-        req.userId = decoded.userId;
-        console.log(req.userId);
-        
-        next();
-    } catch (error) {
-        console.error('Token verification error:', error);
-        return sendResponse(res, 401, 'Invalid token');
-    }
-}
+  if (!token) {
+    return sendUnauthorized(res, 'No token provided');
+  }
 
-module.exports = veryfyToken;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return sendUnauthorized(res, 'Invalid token');
+  }
+};
+
+module.exports = verifyToken;
