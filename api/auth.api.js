@@ -105,7 +105,12 @@ exports.login = async (req, res) => {
         if (!isValid) return sendUnauthorized(res, 'Invalid credentials');
 
         const token = generateToken(user._id, remember);
-        return sendSuccess(res, 'Login successful', { token, user });
+        return sendSuccess(res, 'Login successful', {
+            token: {
+                type: 'Bearer', 
+                token: token, 
+            }, user
+        });
     } catch (error) {
         console.error(error);
         return sendServerError(res, 'Login failed');

@@ -17,6 +17,7 @@ router.get('/suggest/list-suggest', authApi.suggestSport);
 //Post
 router.post('/post/new-post', veryfyToken, upload.array('media_url'), postApi.createNewPost);
 router.get('/post/get-post', veryfyToken, postApi.getPosts);
+router.put('/post/comment',postApi.addComment);
 
 
 //location
