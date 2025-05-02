@@ -19,7 +19,7 @@ const auth_schema = new db.mongoose.Schema({
     sport_preferences: [{ type: db.mongoose.Types.ObjectId, ref: 'Suuggest', default: '' }],
     password: { type: String, required: true, maxlength: 100 },
     created_at: { type: Date, default: Date.now },
-});
+}, { versionKey: false },);
 
 auth_schema.pre('save', async function (next) {
     if (this.isModified('password')) {

@@ -8,7 +8,8 @@ const {
     sendNotFound,
     sendUnauthorized,
     sendForbidden
-} = require('../utils/base_response');
+} = require('../utils/base_response'); // Updated to use responseHelper
+
 exports.createNewPost = async (req, res, next) => {
     try {
         const userId = req.userId;
@@ -26,72 +27,83 @@ exports.createNewPost = async (req, res, next) => {
         const post = new postModel({
             user: userId,
             content,
-            media_url: imageUrls,
+            media_url: process.env.REACT_APP_API_URL + imageUrls,
         });
 
         await post.save();
-        return sendSuccess(res, "success");
+        return sendCreated(res, "Post created successfully", post);
     } catch (error) {
         console.log("Error: ", error);
-        return sendServerError();
+        return sendServerError(res, "Internal server error");
     }
 };
 
 exports.getPosts = async (req, res, next) => {
     try {
         const userId = req.userId;
-        const post = await postModel.find({ user: userId }).populate('user').sort({ created_at: -1 });
-        if (!post) {
-            return sendResponse(res, 404, "Not Found");
+        const posts = await postModel.find({ user: userId })
+            .populate('user', '-password')
+            .sort({ created_at: -1 });
+
+        if (!posts || posts.length === 0) {
+            return sendNotFound(res, "No posts found");
         }
-        return sendResponse(res, 200, "success", post);
+
+        return sendSuccess(res, "Posts retrieved successfully", posts);
     } catch (error) {
         console.log("Error: ", error);
-        return sendResponse(res, 500, "Server error");
+        return sendServerError(res, "Internal server error");
     }
 };
 
 exports.addComment = async (req, res, next) => {
-    const userId = req.userId;
-    const { content, postId } = req.body;
     try {
-        const user = await AuthModel.findById(userId).select('-password');
-        if (!user) return sendNotFound(res, 'User not found');
+        const userId = req.userId;
+        const { content, postId } = req.body;
+
+        if (!content || !postId) {
+            return sendBadRequest(res, "Content and postId are required");
+        }
+
         const post = await postModel.findById(postId);
-        if (!post) return sendResponse.sendNotFound(res, "Post not found");
+        if (!post) {
+            return sendNotFound(res, "Post not found");
+        }
 
         post.comments.push({
             user: userId,
             content: content,
         });
 
-        post.save();
-        return sendResponse.sendSuccess(res, 'new post comment success', post);
+        await post.save();
+        const updatedPost = await postModel.findById(postId).populate('comments.user', '-password');
+        return sendCreated(res, "Comment added successfully", updatedPost);
     } catch (error) {
-        console.error(error);
-        return sendServerError(res, 'Server error');
+        console.error("Error: ", error);
+        return sendServerError(res, "Internal server error");
     }
-}
+};
 
 exports.getComment = async (req, res, next) => {
-    const postId = req.query.postId;
     try {
+        const postId = req.query.postId;
+
         if (!postId) {
-            return sendResponse(res, 400, "Post ID is required");
+            return sendBadRequest(res, "Post ID is required");
         }
 
         const post = await postModel.findById(postId).populate({
-            path: 'comments.user', // populate user của comment (nếu bạn để comment là {user, content})
-            select: '-password'    // loại bỏ password khi trả user
+            path: 'comments.user',
+            select: '-password'
         });
 
         if (!post) {
-            return sendResponse(res, 404, "Post not found");
+            return sendNotFound(res, "Post not found");
         }
 
-        return sendResponse(res, 200, "success", post.comments);
+        return sendSuccess(res, "Comments retrieved successfully", post.comments);
     } catch (error) {
         console.error("Error: ", error);
-        return sendResponse(res, 500, "Server error");
+        return sendServerError(res, "Internal server error");
     }
 };
