@@ -3,6 +3,7 @@ var router = express.Router();
 var authApi = require('../api/auth.api');
 var veryfyToken = require('../middleware/veryfy_token');
 var postApi = require('../api/post.api');
+var challengeApi = require('../api/challenge.api');
 var upload = require('../utils/upload');
 /* GET users listing. */
 router.post('/auth/register', authApi.register);
@@ -24,4 +25,10 @@ router.put('/post/comment',postApi.addComment);
 router.get('/provinces',authApi.getProvinces);
 router.get('/destricts',authApi.getDistricts);
 router.get('/wards',authApi.getWards);
+
+//challenge
+router.post('/challenge/add-challenge',veryfyToken,challengeApi.addChallenge);
+router.get('/challenge/detail-challenge',challengeApi.getChallengeDetail);
+router.get('/challenge/get-challenge-participants',challengeApi.getChallengeParticipants);
+router.get('/get-challenge-by-me',veryfyToken,challengeApi.getChallengeByMe);
 module.exports = router;

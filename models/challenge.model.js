@@ -8,11 +8,13 @@ const challenge_schema = new db.mongoose.Schema({
     created_by: { type: db.mongoose.Types.ObjectId, ref: "Auth" },
     start_date: { type: Date },
     end_date: { type: Date },
+    created_at: { type: Date, default: Date.now() },
+    status: { type: Number, default: 0 },
     participants: [
         {
             user: { type: db.mongoose.Types.ObjectId, ref: "Auth" },
             progress: { type: Number, default: 0 },
-            status: { type: String, enum: ['active', 'complete', 'gropped'], default: 'active' },
+            status: { type: Number, default: 1 },
             joined_at: { type: Date, default: Date.now() }
         }
     ]
