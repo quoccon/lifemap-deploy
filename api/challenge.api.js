@@ -70,20 +70,25 @@ exports.addChallenge = async (req, res, next) => {
 
 exports.getChallengeByMe = async (req, res, next) => {
     const userId = req.userId;
+    const { status } = req.query;
 
     try {
+        // Check if user is authenticated
         if (!userId) {
             return sendUnauthorized(res, 'Authentication required');
         }
 
-        const challenges = await Challenge.find({ created_by: userId })
+        // Find challenges where user is a participant (participants.user == userId)
+        const challenges = await Challenge.find({ 'participants.user': userId,'participants.status': status })
             .populate('created_by', 'username email')
             .populate('participants.user', 'username email');
 
-        if (!challenges || challenges.length === 0) {
-            return sendNotFound(res, 'No challenges found for this user');
-        }
+        // // Check if any challenges exist
+        // if (!challenges || challenges.length === 0) {
+        //     return sendNotFound(res, 'No challenges found for this user');
+        // }
 
+        // Prepare response data
         const challengeList = challenges.map(challenge => ({
             id: challenge._id,
             challenge_name: challenge.challenge_name,
@@ -107,11 +112,11 @@ exports.getChallengeByMe = async (req, res, next) => {
                 joined_at: participant.joined_at
             })),
             created_at: challenge.created_at,
-            updated_at: challenge.updated_at
+            updated_at: challenge.updated_at,
         }));
 
         return sendSuccess(res, 'Challenges retrieved successfully', {
-            totalChallenges: challengeList.length,
+            total_challenges: challengeList.length,
             challenges: challengeList
         });
 
