@@ -73,22 +73,14 @@ exports.getChallengeByMe = async (req, res, next) => {
     const { status } = req.query;
 
     try {
-        // Check if user is authenticated
         if (!userId) {
             return sendUnauthorized(res, 'Authentication required');
         }
 
-        // Find challenges where user is a participant (participants.user == userId)
         const challenges = await Challenge.find({ 'participants.user': userId,'participants.status': status })
-            .populate('created_by', 'username email')
-            .populate('participants.user', 'username email');
-
-        // // Check if any challenges exist
-        // if (!challenges || challenges.length === 0) {
-        //     return sendNotFound(res, 'No challenges found for this user');
-        // }
-
-        // Prepare response data
+            .populate('created_by', 'username email avatar')
+            .populate('participants.user', 'username email avatar');
+        
         const challengeList = challenges.map(challenge => ({
             id: challenge._id,
             challenge_name: challenge.challenge_name,
@@ -98,7 +90,8 @@ exports.getChallengeByMe = async (req, res, next) => {
             created_by: {
                 id: challenge.created_by._id,
                 username: challenge.created_by.username,
-                email: challenge.created_by.email
+                email: challenge.created_by.email,
+                avatar: challenge.created_by.avatar,
             },
             start_date: challenge.start_date,
             end_date: challenge.end_date,
@@ -106,7 +99,8 @@ exports.getChallengeByMe = async (req, res, next) => {
                 user: {
                     id: participant.user._id,
                     username: participant.user.username,
-                    email: participant.user.email
+                    email: participant.user.email,
+                    avatar: participant.user.avatar,
                 },
                 progress: participant.progress,
                 joined_at: participant.joined_at
