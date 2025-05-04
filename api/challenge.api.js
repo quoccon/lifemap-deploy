@@ -16,14 +16,13 @@ exports.addChallenge = async (req, res, next) => {
         sport_type,
         goal,
         duration_days,
-        created_by,
         start_date,
         end_date
     } = req.body;
 
     const userId = req.userId;
     try {
-        if (!challenge_name || !created_by) {
+        if (!challenge_name) {
             return sendBadRequest(res, 'Challenge name and creator are required');
         }
 
@@ -44,11 +43,11 @@ exports.addChallenge = async (req, res, next) => {
             sport_type,
             goal,
             duration_days,
-            created_by,
+            created_by : userId,
             start_date: start_date ? new Date(start_date) : new Date(),
             end_date: calculatedEndDate,
             participants: [{
-                user: created_by,
+                user: userId,
                 progress: 0,
                 joined_at: new Date()
             }]
