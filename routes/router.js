@@ -18,17 +18,17 @@ router.get('/suggest/list-suggest', authApi.suggestSport);
 //Post
 router.post('/post/new-post', veryfyToken, upload.array('media_url'), postApi.createNewPost);
 router.get('/post/get-post', veryfyToken, postApi.getPosts);
-router.put('/post/comment',postApi.addComment);
+router.put('/post/comment', postApi.addComment);
 
 
 //location
-router.get('/provinces',authApi.getProvinces);
-router.get('/destricts',authApi.getDistricts);
-router.get('/wards',authApi.getWards);
+router.get('/provinces', authApi.getProvinces);
+router.get('/destricts', authApi.getDistricts);
+router.get('/wards', authApi.getWards);
 
 //challenge
-router.post('/challenge/add-challenge',veryfyToken,challengeApi.addChallenge);
-router.get('/challenge/detail-challenge',challengeApi.getChallengeDetail);
-router.get('/challenge/get-challenge-participants',challengeApi.getChallengeParticipants);
-router.get('/get-challenge-by-me',veryfyToken,challengeApi.getChallengeByMe);
+router.post('/challenge/add-challenge', upload.single('image_challenge'), veryfyToken, challengeApi.addChallenge);
+router.get('/challenge/detail-challenge', challengeApi.getChallengeDetail);
+router.get('/challenge/get-challenge-participants', challengeApi.getChallengeParticipants);
+router.get('/get-challenge-by-me', veryfyToken, challengeApi.getChallengeByMe);
 module.exports = router;

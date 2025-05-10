@@ -107,8 +107,8 @@ exports.login = async (req, res) => {
         const token = generateToken(user._id, remember);
         return sendSuccess(res, 'Login successful', {
             token: {
-                type: 'Bearer', 
-                token: token, 
+                type: 'Bearer',
+                token: token,
             }, user
         });
     } catch (error) {
@@ -241,3 +241,12 @@ exports.getWards = async (req, res) => {
         return sendServerError(res, 'Failed to retrieve suggestions');
     }
 }
+
+exports.requestFollow = async (req, res, next) => { 
+    
+    try {
+        
+    } catch (error) {
+        
+    }
+};

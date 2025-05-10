@@ -1,5 +1,6 @@
 const db = require('../configs/connect_db');
 const brypt = require('bcryptjs');
+const FollowEnum = require('../constants/enum/follow_enum');
 
 const auth_schema = new db.mongoose.Schema({
     username: { type: String, unique: true, required: true, maxlength: 50 },
@@ -16,6 +17,12 @@ const auth_schema = new db.mongoose.Schema({
         district: { type: String, default: '' },
         city: { type: String, default: '' }
     },
+    follower: [{ type: db.mongoose.Types.ObjectId, ref: 'Auth' }],
+    followRequests: [{
+        from: { type: db.mongoose.Types.ObjectId, ref: 'Auth' },
+        status: { type: Number, enum: Object.values(FollowEnum), default: FollowEnum.PENDING },
+        created_at: { type: Date, default: Date.now }
+    }],
     sport_preferences: [{ type: db.mongoose.Types.ObjectId, ref: 'Suuggest', default: '' }],
     password: { type: String, required: true, maxlength: 100 },
     created_at: { type: Date, default: Date.now },

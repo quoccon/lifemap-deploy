@@ -10,6 +10,8 @@ const challenge_schema = new db.mongoose.Schema({
     end_date: { type: Date },
     created_at: { type: Date, default: Date.now() },
     status: { type: Number, default: 0 },
+    image_challenge: { type: String },
+    daily_start_time: { type: String, },
     participants: [
         {
             user: { type: db.mongoose.Types.ObjectId, ref: "Auth" },
