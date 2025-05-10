@@ -197,8 +197,9 @@ exports.updateUser = async (req, res, next) => {
 
 exports.getProvinces = async (req, res) => {
     try {
-        const provinces = await readJsonFile(PROVINCES_FILE);
-        return sendSuccess(res, 'get provinces success', provinces);
+        const provincesRaw = await readJsonFile(PROVINCES_FILE);
+        const prpvinces = Object.values(provincesRaw)
+        return sendSuccess(res, 'get provinces success', prpvinces);
     } catch (error) {
         console.error(error);
         return sendServerError(res, 'Failed to retrieve suggestions');
