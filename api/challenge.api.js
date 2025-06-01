@@ -10,7 +10,7 @@ const {
     sendForbidden
 } = require('../utils/base_response');
 const { uploadImage } = require('../utils/upload_file_to_firebase');
-const notificationService = require('../api/notification.api');
+const { sendNotificationToUser } = require('../services/notification_service');
 
 exports.addChallenge = async (req, res, next) => {
     const {
@@ -101,6 +101,7 @@ exports.getChallengeByMe = async (req, res, next) => {
             sport_type: challenge.sport_type,
             goal: challenge.goal,
             duration_days: challenge.duration_days,
+            image_challenge: challenge.image_challenge,
             created_by: {
                 id: challenge.created_by._id,
                 username: challenge.created_by.username,
@@ -217,7 +218,7 @@ exports.getChallengeParticipants = async (req, res, next) => {
 
 ///todo: do it later
 exports.joinChallenge = async (req, res, next) => {
-    const { challengeId } = req.params;
+    const { challengeId } = req.body;
     const userId = req.userId;
 
     try {
@@ -266,6 +267,8 @@ exports.joinChallenge = async (req, res, next) => {
             progress: participant.progress,
             joined_at: participant.joined_at
         }));
+
+        await sendNotificationToUser(userId, 'Nhắc nhở', 'Bạn đã tham gia vào thử thách');
 
         return sendSuccess(res, 'Successfully joined challenge', {
             challengeId,
